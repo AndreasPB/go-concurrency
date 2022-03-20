@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 )
 
 func main() {
 	startTime := time.Now()
 	defer printExecutionTime(startTime)
-	getQuotesSeq(100)
+	getQuotesConcurrently(100)
 }
 
 func printExecutionTime(t time.Time) {
@@ -41,7 +42,7 @@ func getQuote() (quote *ChuckNorris, err error) {
 	return quote, nil
 }
 
-func getQuotesSeq(numOfQuotes int) {
+func getQuotesSequencially(numOfQuotes int) {
 	quotesMap := make(map[int]*ChuckNorris, numOfQuotes)
 
 	for i := 0; i < numOfQuotes; i++ {
@@ -55,4 +56,24 @@ func getQuotesSeq(numOfQuotes int) {
 		fmt.Println("New quote: ", quote.Quote)
 	}
 
+}
+
+func getQuotesConcurrently(numOfQuotes int) {
+	var quotesMap sync.Map
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < numOfQuotes; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			quote, err := getQuote()
+
+			if err != nil {
+				panic(err)
+			}
+
+			quotesMap.Store(idx, quote)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
 }
